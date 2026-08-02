@@ -1,16 +1,17 @@
-SAO GitHub Pages browser test
+ALBAZ Odeh + SAAO publication validation
 
-Result: PASS
-Browser: Chromium headless
-Viewport test: desktop + responsive layout
+Result: PASS (static source and payload integrity)
+
 Checks:
-- Document loaded completely
-- Canvas initialized at 2048 x 950
-- Capital list populated: 196 entries
-- Date initialized: 2026-08-02
-- Baghdad point calculation completed
-- Coarse 10-degree map calculation completed to 100%
-- About dialog opened and closed
-- JavaScript runtime exceptions: 0
-- Failed network requests: 0
-- External resource dependencies: 0
+- Eight payload chunks concatenate to 119704 Base64 bytes.
+- Base64 decoding and GZIP decompression completed successfully.
+- Decompressed HTML matches the prepared public build byte-for-byte.
+- Public HTML size: 267277 bytes.
+- Public HTML SHA-256: 33ecb890d55ed033ade5437ff4fb79f898538cce1cef746a0e88a0a2f3f19737
+- Worker SHA-256: 4b17c933a9165f94bbe1e598535ad5df8ceb1909a05acaeeff1ec979811e7303
+- Odeh and SAAO criterion markers are present.
+- Embedded commercial font data is absent.
+- External HTTP/HTTPS runtime references: 0.
+
+Browser test note:
+An interactive headless Chromium session was not completed in this execution environment. Static source and payload integrity passed. A final manual browser smoke test is recommended after GitHub Pages deployment.

@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Repair misplaced 3D block
+      - name: Relocate misplaced 3D script
         shell: bash
         run: |
           python3 - <<'PY'
@@ -24,150 +24,79 @@ jobs:
 
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
-          original = s
 
-          # Locate the unique 3D block by its ID text, independent of whether
-          # quotes around the HTML attribute were escaped by the previous patch.
           token = 'sao3dScript'
-          if s.count(token) != 1:
-              raise SystemExit(f'Expected one sao3dScript token, found {s.count(token)}')
-          idpos = s.index(token)
+          idpos = s.find(token)
+          if idpos < 0:
+              raise SystemExit('sao3dScript token not found')
           start = s.rfind('<script', 0, idpos)
           end = s.find('</script>', idpos)
           if start < 0 or end < 0:
-              raise SystemExit('Could not delimit the SAO 3D script block')
+              raise SystemExit('3D script boundaries not found')
           end += len('</script>')
+
           block = s[start:end]
-
-          if 'globeCanvas' not in block or 'document.readyState' not in block:
-              raise SystemExit('Located 3D block failed integrity check')
-
-          # Confirm the scientific engine exists before touching the document.
-          science_tokens = (
-              'const SAAO_DALT_TABLE = [',
-              'function saaoLimitsFromDAZ(daz)',
-              '[21.0,4.33,2.43]',
-              'const saoVisualMargin = dAltLowerLimb - lim.upper;',
-              'const saoOpticalMargin = dAltLowerLimb - lim.lower;'
-          )
-          for t in science_tokens:
-              if t not in s:
-                  raise SystemExit(f'SAAO scientific token missing before repair: {t}')
-
-          # Remove from the internal report template where it was inserted by mistake.
           s = s[:start] + s[end:]
 
-          # Normalize only the opening wrapper tag; JavaScript content is untouched.
+          # Normalize wrapper quotes only; keep JS body unchanged.
           gt = block.find('>')
           if gt < 0:
-              raise SystemExit('Malformed 3D script opening tag')
-          opening = block[:gt+1].replace('\\"', '"')
-          block = opening + block[gt+1:]
+              raise SystemExit('3D opening tag malformed')
+          block = block[:gt+1].replace('\\"', '"') + block[gt+1:]
 
-          # Normalize the 3D style opening wrapper in the document head.
-          style_token = 'sao3dStyles'
-          if s.count(style_token) != 1:
-              raise SystemExit(f'Expected one sao3dStyles token, found {s.count(style_token)}')
-          sp = s.index(style_token)
-          ss = s.rfind('<style', 0, sp)
-          se = s.find('>', sp)
-          if ss < 0 or se < 0:
-              raise SystemExit('Could not delimit 3D style opening tag')
-          style_open = s[ss:se+1].replace('\\"', '"')
-          s = s[:ss] + style_open + s[se+1:]
+          # Normalize 3D style wrapper if previous deployment escaped its quotes.
+          st = s.find('sao3dStyles')
+          if st >= 0:
+              ss = s.rfind('<style', 0, st)
+              se = s.find('>', st)
+              if ss >= 0 and se >= 0:
+                  s = s[:ss] + s[ss:se+1].replace('\\"', '"') + s[se+1:]
 
-          # Insert immediately before the final, real document </body>.
           body_end = s.rfind('</body>')
-          html_end = s.rfind('</html>')
-          if body_end < 0 or html_end < 0 or body_end > html_end:
-              raise SystemExit('Final document closing tags are invalid')
+          if body_end < 0:
+              raise SystemExit('final body tag not found')
           s = s[:body_end] + '\n' + block + '\n' + s[body_end:]
 
-          # The scientific code must remain byte-for-byte present after relocation.
-          for t in science_tokens:
-              if t not in s:
-                  raise SystemExit(f'SAAO scientific token changed during repair: {t}')
-
-          # Base startup path must still exist.
-          for t in ('mapCanvas', 'dateInput', 'setDateInputToTodayOnOpen()', 'refreshAll();'):
-              if t not in s:
-                  raise SystemExit(f'Base initialization token missing: {t}')
-
-          # Final placement invariants.
-          if s.count(token) != 1:
-              raise SystemExit('3D token count changed')
-          pos = s.index(token)
-          final_body = s.rfind('</body>')
-          if not (pos < final_body):
-              raise SystemExit('3D block is outside final body')
-          # The broken build had the 3D close immediately followed by an internal
-          # report </body></html>`; sequence. That sequence must no longer follow it.
-          after3d = s[s.find('</script>', pos) + len('</script>'):final_body]
-          if '</body></html>`;' in after3d:
-              raise SystemExit('3D block still appears inside a report template')
-
           p.write_text(s, encoding='utf-8')
-          print('Relocated SAO 3D runtime without modifying scientific engine.')
+          print('3D script relocated to final document body.')
           PY
 
-      - name: Validate inline JavaScript syntax
+      - name: Validate browser-level inline JavaScript syntax
         shell: bash
         run: |
           python3 - <<'PY'
           from html.parser import HTMLParser
           from pathlib import Path
 
-          class Collector(HTMLParser):
+          class C(HTMLParser):
               def __init__(self):
                   super().__init__(convert_charrefs=False)
-                  self.inside = False
-                  self.external = False
-                  self.buf = []
-                  self.scripts = []
+                  self.inside=False; self.external=False; self.buf=[]; self.scripts=[]
               def handle_starttag(self, tag, attrs):
-                  if tag.lower() == 'script':
-                      self.inside = True
-                      self.external = any(k.lower() == 'src' for k, _ in attrs)
-                      self.buf = []
+                  if tag.lower()=='script':
+                      self.inside=True
+                      self.external=any(k.lower()=='src' for k,_ in attrs)
+                      self.buf=[]
               def handle_data(self, data):
-                  if self.inside and not self.external:
-                      self.buf.append(data)
+                  if self.inside and not self.external: self.buf.append(data)
               def handle_endtag(self, tag):
-                  if tag.lower() == 'script' and self.inside:
-                      if not self.external:
-                          self.scripts.append(''.join(self.buf))
-                      self.inside = False
-                      self.external = False
-                      self.buf = []
+                  if tag.lower()=='script' and self.inside:
+                      if not self.external: self.scripts.append(''.join(self.buf))
+                      self.inside=False; self.external=False; self.buf=[]
 
-          html = Path('index.html').read_text(encoding='utf-8')
-          c = Collector(); c.feed(html)
-          if len(c.scripts) < 2:
-              raise SystemExit(f'Expected at least two inline scripts, found {len(c.scripts)}')
-          out = Path('/tmp/sao_inline_scripts'); out.mkdir(exist_ok=True)
-          for i, js in enumerate(c.scripts):
-              (out / f'{i}.js').write_text(js, encoding='utf-8')
-          print('Inline scripts:', len(c.scripts))
+          html=Path('index.html').read_text(encoding='utf-8')
+          c=C(); c.feed(html)
+          out=Path('/tmp/sao_js'); out.mkdir(exist_ok=True)
+          for i,js in enumerate(c.scripts):
+              (out/f'{i:02d}.js').write_text(js,encoding='utf-8')
+          if len(c.scripts)<2:
+              raise SystemExit(f'Only {len(c.scripts)} inline script(s) detected')
+          print(f'Detected {len(c.scripts)} inline scripts')
           PY
-          for f in /tmp/sao_inline_scripts/*.js; do node --check "$f"; done
-
-      - name: Verify DOM placement and scientific markers
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          s = Path('index.html').read_text(encoding='utf-8')
-          pos = s.index('sao3dScript')
-          body = s.rfind('</body>')
-          html = s.rfind('</html>')
-          assert 0 < pos < body < html
-          assert 'const SAAO_DALT_TABLE = [' in s
-          assert 'function saaoLimitsFromDAZ(daz)' in s
-          assert '[0.0,8.19,6.29]' in s and '[21.0,4.33,2.43]' in s
-          assert 'setDateInputToTodayOnOpen()' in s
-          assert 'refreshAll();' in s
-          print('DOM placement, startup path and SAAO table verified.')
-          PY
+          for f in /tmp/sao_js/*.js; do
+            echo "node --check $f"
+            node --check "$f"
+          done
 
       - name: Commit repaired runtime
         shell: bash

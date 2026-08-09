@@ -1,0 +1,35 @@
+name: Apply SAO v10.0.9 3D
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.deploy/READY'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Rebuild verified index.html
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .deploy/chunk_*.txt | base64 -d | xz -d > index.html
+          echo "0e4d09e206e6fb553e25e41a0149407ee1f8c4e5f2d8a77b75793ca757a97c2f  index.html" | sha256sum -c -
+          grep -q "v10.0.9" index.html
+          grep -q "globeCanvas" index.html
+      - name: Commit SAO 3D build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf .deploy
+          git add index.html .deploy
+          git commit -m "Upgrade SAO atlas to v10.0.9 3D"
+          git push

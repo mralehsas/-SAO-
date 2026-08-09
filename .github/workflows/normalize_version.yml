@@ -1,0 +1,40 @@
+name: Normalize SAO clean-build version
+
+on:
+  push:
+    branches: [clean-rebuild-staging-2026-08-09]
+    paths: ['.deploy/NORMALIZE_VERSION']
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Normalize version and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html'); s=p.read_text(encoding='utf-8')
+          s=s.replace('v9.6.3','v10.0.9').replace('9.6.3','10.0.9')
+          for x in ['const SAAO_DALT_TABLE','function saaoLimitsFromDAZ(daz)','[0.0,8.19,6.29]','[20.0,4.53,2.63],[20.5,4.43,2.53],[21.0,4.33,2.43]','id="saoView3DBtn"','id="globeCanvas"']:
+              assert x in s, x
+          assert '9.6.3' not in s
+          p.write_text(s,encoding='utf-8')
+          PY
+          grep -q 'v10.0.9' index.html
+      - name: Commit final one-file build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -rf .github .deploy
+          git add index.html
+          test "$(git ls-files | wc -l | tr -d ' ')" = "1"
+          git commit -m "Finalize clean SAO v10.0.9 single-file build"
+          git push origin HEAD:clean-rebuild-staging-2026-08-09

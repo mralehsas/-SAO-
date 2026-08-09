@@ -1,0 +1,94 @@
+name: Clean rebuild SAO v10.0.9
+
+on:
+  push:
+    branches: [clean-rebuild-staging-2026-08-09]
+    paths:
+      - '.deploy/CLEAN_REBUILD_READY'
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Recover audited scientific source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show 3298bcba5de0f9a16f93a3f4581e72877984f12e:index.html > /tmp/sao_original.html
+          test -s /tmp/sao_original.html
+          grep -q 'const SAAO_DALT_TABLE' /tmp/sao_original.html
+          grep -q 'function saaoLimitsFromDAZ' /tmp/sao_original.html
+
+      - name: Build one-file 2D and 3D edition
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 clean_rebuild.py /tmp/sao_original.html /tmp/index.html
+          test -s /tmp/index.html
+
+      - name: Validate scientific invariants and single-file runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from html.parser import HTMLParser
+          import re
+          s=Path('/tmp/index.html').read_text(encoding='utf-8')
+          must=[
+            'const SAAO_DALT_TABLE',
+            'function saaoLimitsFromDAZ(daz)',
+            '[0.0,8.19,6.29]',
+            '[20.0,4.53,2.63],[20.5,4.43,2.53],[21.0,4.33,2.43]',
+            'const saoVisualMargin = dAltLowerLimb - lim.upper;',
+            'const saoOpticalMargin = dAltLowerLimb - lim.lower;',
+            'BASEMAP_DATA','baseImg.src = BASEMAP_DATA;',
+            'id="saoView2DBtn"','id="saoView3DBtn"','id="globeCanvas"'
+          ]
+          for x in must:
+            assert x in s, x
+          assert 'sao3d-fallback.js' not in s
+          assert s.rfind('id="sao3dCleanRuntime"') < s.rfind('</body>')
+          class P(HTMLParser):
+            def __init__(self):
+              super().__init__(convert_charrefs=False); self.in_script=False; self.external=[]; self.buf=[]; self.scripts=[]
+            def handle_starttag(self,tag,attrs):
+              if tag.lower()=='script':
+                a=dict(attrs); self.in_script=True; self.buf=[]
+                if a.get('src'): self.external.append(a['src'])
+            def handle_data(self,data):
+              if self.in_script:self.buf.append(data)
+            def handle_endtag(self,tag):
+              if tag.lower()=='script' and self.in_script:
+                self.scripts.append(''.join(self.buf)); self.in_script=False; self.buf=[]
+          p=P(); p.feed(s)
+          if p.external: raise SystemExit('External script dependencies: '+repr(p.external))
+          out=Path('/tmp/sao_js'); out.mkdir(exist_ok=True)
+          for i,x in enumerate(p.scripts): (out/f'{i:03}.js').write_text(x,encoding='utf-8')
+          print('inline scripts',len(p.scripts),'bytes',len(s))
+          PY
+          for f in /tmp/sao_js/*.js; do
+            node --check "$f"
+          done
+
+      - name: Replace repository contents with index only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -rf .
+          cp /tmp/index.html index.html
+          git add index.html
+          test "$(git ls-files | wc -l | tr -d ' ')" = "1"
+          test "$(git ls-files)" = "index.html"
+          git commit -m "Clean rebuild SAO v10.0.9 as single-file 2D and 3D atlas"
+          git push origin HEAD:clean-rebuild-staging-2026-08-09

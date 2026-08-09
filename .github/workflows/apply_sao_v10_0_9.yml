@@ -20,9 +20,11 @@ jobs:
         run: |
           set -euo pipefail
           cat .deploy/chunk_*.txt | base64 -d | xz -d > index.html
-          echo "0e4d09e206e6fb553e25e41a0149407ee1f8c4e5f2d8a77b75793ca757a97c2f  index.html" | sha256sum -c -
+          echo "0dd4ebca3147da03777409335d1f71ac6fb47dff3a140f397a4b1ed4ecd47795  index.html" | sha256sum -c -
           grep -q "v10.0.9" index.html
           grep -q "globeCanvas" index.html
+          grep -q "SAAO_Q_VISUAL = 11.3" index.html
+          grep -q "SAAO_Q_OPTICAL = 9.0" index.html
       - name: Commit SAO 3D build
         shell: bash
         run: |

@@ -1,9 +1,0 @@
-SAO GitHub Pages build report
-
-Source: SAO_South_Africa_Hilal_Map_v9_6_3(12) (1).html
-Output: index.html
-Removed embedded commercial font blocks: 2
-Public index size: 1196870 bytes
-SHA-256: 282ddc26dee35593d71c50f4e3064ed5d96473479b35cd19ac4eb960ae4a8b93
-External resource references: 0
-JavaScript script blocks: 4

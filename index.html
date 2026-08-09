@@ -11,10 +11,10 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ar_IQ">
 <meta property="og:title" content="أطلس ALBAZ لرؤية الهلال بمعيار SAO">
-<meta property="og:description" content="خريطة عالمية تفاعلية لمعيار SAO/SAAO جنوب أفريقيا لرؤية الهلال — الإصدار 9.6.3.">
+<meta property="og:description" content="خريطة عالمية تفاعلية لمعيار SAO/SAAO جنوب أفريقيا لرؤية الهلال — الإصدار 10.0.9.">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23071322'/%3E%3Cpath d='M41 11a22 22 0 1 0 12 38A24 24 0 1 1 41 11z' fill='%23e2be69'/%3E%3Ccircle cx='45' cy='18' r='3' fill='%23fff1bd'/%3E%3C/svg%3E">
-<title>أطلس ALBAZ لرؤية الهلال بمعيار SAO | v9.6.3</title>
+<title>أطلس ALBAZ لرؤية الهلال بمعيار SAO | v10.0.9</title>
 <style>
   /* Public web build: embedded commercial font removed. */
 
@@ -1924,7 +1924,7 @@
   cursor:pointer;
 }
 
-  /* SAO v9.6.3 — علامة العاصمة العلمية الدقيقة
+  /* SAO v10.0.9 — علامة العاصمة العلمية الدقيقة
      مبدأ هذه النسخة: الجمال لا يغيّر المركز. المركز الحقيقي هو البكسل x/y فقط.
      تم تقليل الهالة حتى لا تخدع العين، وصندوق الاسم لم يعد يغطي نقطة العاصمة. */
   .capital-dot {
@@ -1977,7 +1977,7 @@
 
 
 
-  /* SAO v9.6.3 — لوحة معايرة احترافية لموضع العاصمة فوق الخريطة
+  /* SAO v10.0.9 — لوحة معايرة احترافية لموضع العاصمة فوق الخريطة
      الهدف: أقصى دقة بصرية ممكنة فوق صورة الخريطة الثابتة دون المساس بمعادلات SAO. */
   .capital-calibration-panel{
     position:absolute;
@@ -2046,7 +2046,7 @@
     .capital-calibration-panel button{font-size:11px; padding:6px 8px;}
   }
 
-  /* SAO v9.6.3 — إخفاء لوحة معايرة العاصمة في النسخة النهائية */
+  /* SAO v10.0.9 — إخفاء لوحة معايرة العاصمة في النسخة النهائية */
   #capitalCalibrationPanel,
   .capital-calibration-panel{
     display:none !important;
@@ -2087,6 +2087,24 @@ html,body{padding-bottom:130px!important;}
   }
   @media(max-width:720px){.versionPill{display:none!important}.webOnlyNotice{font-size:11px}}
 </style>
+
+<style id="sao3dStyles" data-sao3d="v10.0.9">
+.sao3d-switcher{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;align-items:center}
+.sao3d-switcher button{width:auto;min-width:150px;padding:10px 15px}
+.sao3d-switcher button.active{outline:2px solid rgba(255,228,163,.8);box-shadow:0 0 0 4px rgba(228,196,119,.12)}
+#sao3dPanel{display:none;margin-top:12px;border:1px solid rgba(228,196,119,.28);border-radius:20px;overflow:hidden;background:radial-gradient(circle at 50% 42%,#152941 0,#07111d 58%,#03070c 100%);box-shadow:0 18px 50px rgba(0,0,0,.35)}
+#sao3dPanel.active{display:block}
+.sao3d-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;background:rgba(8,18,30,.88);border-bottom:1px solid rgba(228,196,119,.20)}
+.sao3d-title{color:#ffe4a3;font-weight:700;font-size:14px}
+.sao3d-actions{display:flex;gap:7px;flex-wrap:wrap}
+.sao3d-actions button{width:auto;min-width:0;padding:8px 11px;min-height:38px;font-size:12px}
+.sao3d-wrap{position:relative;width:100%;min-height:360px;display:grid;place-items:center;overflow:hidden;touch-action:none;user-select:none}
+#globeCanvas{display:block;width:min(100%,860px);height:auto;aspect-ratio:1/1;cursor:grab;touch-action:none}
+#globeCanvas.dragging{cursor:grabbing}
+.sao3d-help{padding:9px 12px;text-align:center;color:#aebfd4;font-size:12px;line-height:1.7;border-top:1px solid rgba(49,75,107,.55)}
+@media(max-width:720px){.sao3d-switcher button{flex:1 1 140px}.sao3d-wrap{min-height:300px}}
+</style>
+
 </head>
 <body>
 <noscript><div style="direction:rtl;padding:14px;margin:12px;border:1px solid #e2be69;border-radius:12px;background:#071322;color:#fff">هذه الصفحة تحتاج إلى تفعيل JavaScript لتشغيل الحسابات الفلكية ورسم الخريطة.</div></noscript>
@@ -2096,9 +2114,9 @@ html,body{padding-bottom:130px!important;}
   <p>جاري تهيئة محرك معيار SAO جنوب أفريقيا والحسابات الفلكية...</p>
   <div class="splashBar"><div></div></div>
 </div>
-<div class="versionCorner vcTopRight">v9.6.3</div>
-<div class="versionCorner vcTopLeft">v9.6.3</div>
-<div class="versionCorner vcBottomLeft">v9.6.3</div>
+<div class="versionCorner vcTopRight">v10.0.9</div>
+<div class="versionCorner vcTopLeft">v10.0.9</div>
+<div class="versionCorner vcBottomLeft">v10.0.9</div>
 <div class="appShell">
 
 <header class="appHeader">
@@ -2112,7 +2130,7 @@ html,body{padding-bottom:130px!important;}
         </div>
       </div>
     </div>
-    <div class="versionPill">v9.6.3 Web Edition</div>
+    <div class="versionPill">v10.0.9 Web Edition</div>
   </div>
 
   <nav class="quickNav">
@@ -2438,7 +2456,7 @@ html,body{padding-bottom:130px!important;}
 </main>
 
 <div class="footerNote">
-  <strong>أطلس ALBAZ لرؤية الهلال بمعيار SAO — الإصدار 9.6.3</strong><br>
+  <strong>أطلس ALBAZ لرؤية الهلال بمعيار SAO — الإصدار 10.0.9</strong><br>
   إعداد الفيزيائي عمر الباز — رئيس مبرمجين أقدم — عضو الاتحاد العربي لعلوم الفضاء والفلك.<br>
   نسخة ويب مستقلة تعمل داخل المتصفح دون إرسال بيانات الحساب إلى خادم خارجي.
 </div>
@@ -2503,7 +2521,7 @@ function latToY(lat){
 }
 
 
-/* SAO_GEO_MARKER_SKILL v9.6.3
+/* SAO_GEO_MARKER_SKILL v10.0.9
    تحويل موحد من الإحداثيات الجغرافية إلى بكسلات الخريطة.
    لا توجد إزاحة خاصة ببغداد أو القاهرة أو الجزائر أو طهران؛ كل العواصم تمر من هنا.
    الحسابات العلمية تبقى على lat/lon الأصلية، وهذه الدالة للتمثيل البصري فقط. */
@@ -4205,6 +4223,137 @@ function makeReportHTML(includeScript=false){
   ${includeScript ? '<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script>' : ''}
 </div>
 <!-- ALBAZ_SAO_SOUTH_AFRICA_PATCH_V1_0 -->
+
+<script id="sao3dScript" data-sao3d="v10.0.9">
+(() => {
+  'use strict';
+  const boot = () => {
+    const mapCanvas = document.getElementById('mapCanvas');
+    const stage = document.getElementById('mapStage');
+    if (!mapCanvas || !stage || document.getElementById('globeCanvas')) return;
+
+    const switcher = document.createElement('div');
+    switcher.className = 'sao3d-switcher';
+    switcher.innerHTML = '<button type="button" id="view2dBtn" class="secondary active">الخريطة 2D</button><button type="button" id="view3dBtn" class="secondary">الكرة الأرضية 3D</button>';
+    stage.parentNode.insertBefore(switcher, stage);
+
+    const panel = document.createElement('section');
+    panel.id = 'sao3dPanel';
+    panel.setAttribute('aria-label','الكرة الأرضية ثلاثية الأبعاد لمعيار SAAO');
+    panel.innerHTML = `
+      <div class="sao3d-head">
+        <div class="sao3d-title">SAAO 3D Globe — نفس نتائج الخريطة ثنائية الأبعاد</div>
+        <div class="sao3d-actions">
+          <button type="button" class="secondary" id="globeReset">إعادة التمركز</button>
+          <button type="button" class="secondary" id="globeZoomIn">تكبير +</button>
+          <button type="button" class="secondary" id="globeZoomOut">تصغير −</button>
+          <button type="button" class="secondary" id="globeExport">تصدير PNG</button>
+        </div>
+      </div>
+      <div class="sao3d-wrap"><canvas id="globeCanvas" width="820" height="820"></canvas></div>
+      <div class="sao3d-help">اسحب الكرة للتدوير • عجلة الفأرة للتكبير والتصغير • الإسقاط 3D يقرأ بكسلات <b>mapCanvas</b> نفسها ولا يعيد الحساب الفلكي</div>`;
+    stage.insertAdjacentElement('afterend', panel);
+
+    const globe = document.getElementById('globeCanvas');
+    const ctx = globe.getContext('2d', {alpha:false});
+    const btn2 = document.getElementById('view2dBtn');
+    const btn3 = document.getElementById('view3dBtn');
+    let lon0 = 20 * Math.PI/180;
+    let lat0 = 20 * Math.PI/180;
+    let zoom = 0.94;
+    let dragging = false, px = 0, py = 0;
+    let raf = 0;
+
+    const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+    const wrapPi = a => { while(a > Math.PI) a -= 2*Math.PI; while(a < -Math.PI) a += 2*Math.PI; return a; };
+
+    function sourcePixels(){
+      const sw = mapCanvas.width, sh = mapCanvas.height;
+      if (!sw || !sh) return null;
+      try { return {sw,sh,data:mapCanvas.getContext('2d').getImageData(0,0,sw,sh).data}; }
+      catch(e){ console.warn('SAAO 3D source read failed',e); return null; }
+    }
+
+    function project(lon,lat,R,cx,cy){
+      const dl = wrapPi(lon-lon0), sp=Math.sin(lat0), cp=Math.cos(lat0), sl=Math.sin(lat), cl=Math.cos(lat);
+      const vis = sp*sl + cp*cl*Math.cos(dl);
+      if (vis < 0) return null;
+      return [cx + R*cl*Math.sin(dl), cy - R*(cp*sl-sp*cl*Math.cos(dl))];
+    }
+
+    function gridLine(points,R,cx,cy,width,alpha){
+      ctx.beginPath(); let pen=false;
+      for(const q of points){
+        const z=project(q[0],q[1],R,cx,cy);
+        if(!z){pen=false;continue}
+        if(!pen){ctx.moveTo(z[0],z[1]);pen=true}else ctx.lineTo(z[0],z[1]);
+      }
+      ctx.lineWidth=width; ctx.strokeStyle=`rgba(255,255,255,${alpha})`; ctx.stroke();
+    }
+
+    function render(){
+      raf = 0;
+      const W=globe.width,H=globe.height,cx=W/2,cy=H/2,R=Math.min(W,H)*0.47*zoom;
+      ctx.fillStyle='#03070c'; ctx.fillRect(0,0,W,H);
+      const src=sourcePixels();
+      if(!src){ctx.fillStyle='#ffe4a3';ctx.font='18px Tahoma';ctx.textAlign='center';ctx.fillText('احسب الخريطة أولاً',cx,cy);return}
+      const out=ctx.createImageData(W,H), d=out.data, {sw,sh,data}=src;
+      const sp=Math.sin(lat0),cp=Math.cos(lat0);
+      const xmin=Math.max(0,Math.floor(cx-R)), xmax=Math.min(W-1,Math.ceil(cx+R));
+      const ymin=Math.max(0,Math.floor(cy-R)), ymax=Math.min(H-1,Math.ceil(cy+R));
+      for(let y=ymin;y<=ymax;y++){
+        const sy=(cy-y)/R;
+        for(let x=xmin;x<=xmax;x++){
+          const sx=(x-cx)/R, rr=sx*sx+sy*sy;
+          if(rr>1) continue;
+          let lat,lon;
+          if(rr<1e-12){lat=lat0;lon=lon0}
+          else{
+            const rho=Math.sqrt(rr), cosc=Math.sqrt(Math.max(0,1-rr));
+            lat=Math.asin(clamp(cosc*sp + sy*cp,-1,1));
+            lon=lon0+Math.atan2(sx, rho*cp*cosc - sy*sp);
+          }
+          lon=wrapPi(lon);
+          const u=((lon+Math.PI)/(2*Math.PI));
+          const v=(Math.PI/2-lat)/Math.PI;
+          const ix=Math.min(sw-1,Math.max(0,Math.floor(u*sw)));
+          const iy=Math.min(sh-1,Math.max(0,Math.floor(v*sh)));
+          const si=(iy*sw+ix)*4, oi=(y*W+x)*4;
+          const shade=0.84+0.16*Math.sqrt(Math.max(0,1-rr));
+          d[oi]=data[si]*shade; d[oi+1]=data[si+1]*shade; d[oi+2]=data[si+2]*shade; d[oi+3]=255;
+        }
+      }
+      ctx.putImageData(out,0,0);
+      ctx.save(); ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.clip();
+      for(let L=-165;L<=180;L+=15){const a=[];for(let B=-90;B<=90;B+=2)a.push([L*Math.PI/180,B*Math.PI/180]);gridLine(a,R,cx,cy,0.65,0.20)}
+      for(let B=-75;B<=75;B+=15){const a=[];for(let L=-180;L<=180;L+=2)a.push([L*Math.PI/180,B*Math.PI/180]);gridLine(a,R,cx,cy,0.65,0.20)}
+      for(const B of [-60,60]){const a=[];for(let L=-180;L<=180;L+=1)a.push([L*Math.PI/180,B*Math.PI/180]);ctx.beginPath();let pen=false;for(const q of a){const z=project(q[0],q[1],R,cx,cy);if(!z){pen=false;continue}if(!pen){ctx.moveTo(...z);pen=true}else ctx.lineTo(...z)}ctx.strokeStyle='rgba(255,220,125,.75)';ctx.lineWidth=1.5;ctx.stroke()}
+      ctx.restore();
+      const grd=ctx.createRadialGradient(cx-R*.28,cy-R*.35,R*.1,cx,cy,R);grd.addColorStop(0,'rgba(255,255,255,.12)');grd.addColorStop(.72,'rgba(0,0,0,0)');grd.addColorStop(1,'rgba(0,0,0,.40)');ctx.fillStyle=grd;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(255,228,163,.75)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.stroke();
+    }
+    const requestRender=()=>{if(!raf)raf=requestAnimationFrame(render)};
+
+    btn2.onclick=()=>{stage.style.display='';panel.classList.remove('active');btn2.classList.add('active');btn3.classList.remove('active')};
+    btn3.onclick=()=>{stage.style.display='none';panel.classList.add('active');btn3.classList.add('active');btn2.classList.remove('active');requestRender()};
+    document.getElementById('globeReset').onclick=()=>{lon0=20*Math.PI/180;lat0=20*Math.PI/180;zoom=.94;requestRender()};
+    document.getElementById('globeZoomIn').onclick=()=>{zoom=clamp(zoom*1.10,.62,1.16);requestRender()};
+    document.getElementById('globeZoomOut').onclick=()=>{zoom=clamp(zoom/1.10,.62,1.16);requestRender()};
+    document.getElementById('globeExport').onclick=()=>{requestRender();requestAnimationFrame(()=>{const a=document.createElement('a');a.download='SAO_SAAO_3D_Globe.png';a.href=globe.toDataURL('image/png');a.click()})};
+
+    globe.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;globe.classList.add('dragging');globe.setPointerCapture(e.pointerId)});
+    globe.addEventListener('pointermove',e=>{if(!dragging)return;const dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;lon0=wrapPi(lon0-dx*.006);lat0=clamp(lat0+dy*.005,-Math.PI/2+.02,Math.PI/2-.02);requestRender()});
+    const stop=e=>{dragging=false;globe.classList.remove('dragging');try{globe.releasePointerCapture(e.pointerId)}catch(_){}};
+    globe.addEventListener('pointerup',stop);globe.addEventListener('pointercancel',stop);
+    globe.addEventListener('wheel',e=>{e.preventDefault();zoom=clamp(zoom*(e.deltaY<0?1.08:.92),.62,1.16);requestRender()},{passive:false});
+
+    // When a fresh 2D map is computed, switching to 3D always samples the latest canvas pixels.
+    window.addEventListener('resize',()=>{if(panel.classList.contains('active'))requestRender()});
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
+})();
+</script>
+
 </body>
 </html>`;
 }
@@ -4253,7 +4402,7 @@ function exportCaseHTML(){
   <div class="map">
     <img src="${img}" alt="خريطة رؤية الهلال">
   </div>
-  <footer>v9.6.3 Web Edition — HTML Export — الخريطة ملتقطة من الشاشة الحالية بعد حساب الألوان.</footer>
+  <footer>v10.0.9 Web Edition — HTML Export — الخريطة ملتقطة من الشاشة الحالية بعد حساب الألوان.</footer>
 </div>
 <!-- ALBAZ_SAO_SOUTH_AFRICA_PATCH_V1_0 -->
 </body>

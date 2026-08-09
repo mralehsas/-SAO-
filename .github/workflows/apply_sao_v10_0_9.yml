@@ -23,7 +23,7 @@ jobs:
           for f in .deploy/part_*.b64; do
             base64 -d "$f" | xz -d >> index.html
           done
-          echo "0dd4ebca3147da03777409335d1f71ac6fb47dff3a140f397a4b1ed4ecd47795  index.html" | sha256sum -c -
+          echo "4303422d048421efdfe7d5fa1e4c25f8070e8f3f9cf3451a5a9dfff85bf1f6f0  index.html" | sha256sum -c -
           grep -q "v10.0.9" index.html
           grep -q "globeCanvas" index.html
           grep -q "SAAO_Q_VISUAL = 11.3" index.html

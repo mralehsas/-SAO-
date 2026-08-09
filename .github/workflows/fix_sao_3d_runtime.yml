@@ -16,7 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Move 3D runtime block to the real document body
+      - name: Repair misplaced 3D block
         shell: bash
         run: |
           python3 - <<'PY'
@@ -24,149 +24,149 @@ jobs:
 
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
+          original = s
 
-          escaped_marker = r'<script id=\"sao3dScript\" data-sao3d=\"v10.0.9\">'
-          normal_marker = '<script id="sao3dScript" data-sao3d="v10.0.9">'
-
-          escaped_count = s.count(escaped_marker)
-          normal_count = s.count(normal_marker)
-          if escaped_count + normal_count != 1:
-              raise SystemExit(
-                  f'Expected exactly one SAO 3D script marker; escaped={escaped_count}, normal={normal_count}'
-              )
-
-          marker = escaped_marker if escaped_count == 1 else normal_marker
-          start = s.index(marker)
-          end_tag = '</script>'
-          end = s.find(end_tag, start)
-          if end < 0:
-              raise SystemExit('Could not find closing script tag for SAO 3D block')
-          end += len(end_tag)
+          # Locate the unique 3D block by its ID text, independent of whether
+          # quotes around the HTML attribute were escaped by the previous patch.
+          token = 'sao3dScript'
+          if s.count(token) != 1:
+              raise SystemExit(f'Expected one sao3dScript token, found {s.count(token)}')
+          idpos = s.index(token)
+          start = s.rfind('<script', 0, idpos)
+          end = s.find('</script>', idpos)
+          if start < 0 or end < 0:
+              raise SystemExit('Could not delimit the SAO 3D script block')
+          end += len('</script>')
           block = s[start:end]
 
-          # Guard against accidentally capturing an unrelated/truncated block.
-          for required in ('globeCanvas', 'document.readyState', 'const boot = () =>'):
-              if required not in block:
-                  raise SystemExit(f'3D block is missing required marker: {required}')
+          if 'globeCanvas' not in block or 'document.readyState' not in block:
+              raise SystemExit('Located 3D block failed integrity check')
 
-          # Remove the misplaced block from the report HTML template.
-          s = s[:start] + s[end:]
-
-          # The wrapper tag was escaped only because it had landed inside a JS
-          # template literal. Normalize it before placing it in real HTML.
-          block = block.replace(escaped_marker, normal_marker, 1)
-
-          # Normalize the 3D style wrapper for the real document head as well.
-          escaped_style = r'<style id=\"sao3dStyles\" data-sao3d=\"v10.0.9\">'
-          normal_style = '<style id="sao3dStyles" data-sao3d="v10.0.9">'
-          if s.count(escaped_style) == 1:
-              s = s.replace(escaped_style, normal_style, 1)
-          elif s.count(normal_style) != 1:
-              raise SystemExit('Expected exactly one SAO 3D style block')
-
-          # Insert before the REAL document closing body tag, not a </body>
-          # sequence embedded inside a JavaScript report template literal.
-          body_end = s.rfind('</body>')
-          if body_end < 0:
-              raise SystemExit('Final </body> not found')
-          s = s[:body_end] + '\n' + block + '\n' + s[body_end:]
-
-          # Scientific-engine invariants: preserve the detailed SAAO table
-          # and its DALT/|DAZ| interpolation path exactly.
-          scientific_markers = (
-              'const SAAO_DALT_TABLE',
+          # Confirm the scientific engine exists before touching the document.
+          science_tokens = (
+              'const SAAO_DALT_TABLE = [',
               'function saaoLimitsFromDAZ(daz)',
-              '[20.0,4.53,2.63],[20.5,4.43,2.53],[21.0,4.33,2.43]',
+              '[21.0,4.33,2.43]',
               'const saoVisualMargin = dAltLowerLimb - lim.upper;',
               'const saoOpticalMargin = dAltLowerLimb - lim.lower;'
           )
-          for required in scientific_markers:
-              if required not in s:
-                  raise SystemExit(f'Scientific SAAO invariant missing: {required}')
+          for t in science_tokens:
+              if t not in s:
+                  raise SystemExit(f'SAAO scientific token missing before repair: {t}')
 
-          # Base application initialization must remain intact.
-          for required in ('id="mapCanvas"', 'id="dateInput"', 'setDateInputToTodayOnOpen()', 'refreshAll();'):
-              if required not in s:
-                  raise SystemExit(f'Base runtime invariant missing: {required}')
+          # Remove from the internal report template where it was inserted by mistake.
+          s = s[:start] + s[end:]
 
-          if s.count(normal_marker) != 1 or s.count(escaped_marker) != 0:
-              raise SystemExit('3D script marker was not normalized exactly once')
-          if s.rfind(normal_marker) > s.rfind('</body>'):
-              raise SystemExit('3D script was not placed inside the final body')
+          # Normalize only the opening wrapper tag; JavaScript content is untouched.
+          gt = block.find('>')
+          if gt < 0:
+              raise SystemExit('Malformed 3D script opening tag')
+          opening = block[:gt+1].replace('\\"', '"')
+          block = opening + block[gt+1:]
 
-          # Ensure the relocated block is near the actual document end, not
-          # inside an earlier report template.
-          tail = s[s.rfind(normal_marker):]
-          if not tail.rstrip().endswith('</body>\n</html>') and not tail.rstrip().endswith('</body></html>'):
-              # Do not require exact whitespace, but require the final HTML close.
-              if '</body>' not in tail or '</html>' not in tail:
-                  raise SystemExit('3D block is not in the final document tail')
+          # Normalize the 3D style opening wrapper in the document head.
+          style_token = 'sao3dStyles'
+          if s.count(style_token) != 1:
+              raise SystemExit(f'Expected one sao3dStyles token, found {s.count(style_token)}')
+          sp = s.index(style_token)
+          ss = s.rfind('<style', 0, sp)
+          se = s.find('>', sp)
+          if ss < 0 or se < 0:
+              raise SystemExit('Could not delimit 3D style opening tag')
+          style_open = s[ss:se+1].replace('\\"', '"')
+          s = s[:ss] + style_open + s[se+1:]
+
+          # Insert immediately before the final, real document </body>.
+          body_end = s.rfind('</body>')
+          html_end = s.rfind('</html>')
+          if body_end < 0 or html_end < 0 or body_end > html_end:
+              raise SystemExit('Final document closing tags are invalid')
+          s = s[:body_end] + '\n' + block + '\n' + s[body_end:]
+
+          # The scientific code must remain byte-for-byte present after relocation.
+          for t in science_tokens:
+              if t not in s:
+                  raise SystemExit(f'SAAO scientific token changed during repair: {t}')
+
+          # Base startup path must still exist.
+          for t in ('mapCanvas', 'dateInput', 'setDateInputToTodayOnOpen()', 'refreshAll();'):
+              if t not in s:
+                  raise SystemExit(f'Base initialization token missing: {t}')
+
+          # Final placement invariants.
+          if s.count(token) != 1:
+              raise SystemExit('3D token count changed')
+          pos = s.index(token)
+          final_body = s.rfind('</body>')
+          if not (pos < final_body):
+              raise SystemExit('3D block is outside final body')
+          # The broken build had the 3D close immediately followed by an internal
+          # report </body></html>`; sequence. That sequence must no longer follow it.
+          after3d = s[s.find('</script>', pos) + len('</script>'):final_body]
+          if '</body></html>`;' in after3d:
+              raise SystemExit('3D block still appears inside a report template')
 
           p.write_text(s, encoding='utf-8')
+          print('Relocated SAO 3D runtime without modifying scientific engine.')
           PY
 
-      - name: Validate top-level inline JavaScript syntax
+      - name: Validate inline JavaScript syntax
         shell: bash
         run: |
           python3 - <<'PY'
           from html.parser import HTMLParser
           from pathlib import Path
 
-          class ScriptCollector(HTMLParser):
+          class Collector(HTMLParser):
               def __init__(self):
                   super().__init__(convert_charrefs=False)
-                  self.in_script = False
+                  self.inside = False
                   self.external = False
                   self.buf = []
                   self.scripts = []
               def handle_starttag(self, tag, attrs):
                   if tag.lower() == 'script':
-                      self.in_script = True
+                      self.inside = True
                       self.external = any(k.lower() == 'src' for k, _ in attrs)
                       self.buf = []
               def handle_data(self, data):
-                  if self.in_script and not self.external:
+                  if self.inside and not self.external:
                       self.buf.append(data)
               def handle_endtag(self, tag):
-                  if tag.lower() == 'script' and self.in_script:
+                  if tag.lower() == 'script' and self.inside:
                       if not self.external:
                           self.scripts.append(''.join(self.buf))
-                      self.in_script = False
+                      self.inside = False
                       self.external = False
                       self.buf = []
 
           html = Path('index.html').read_text(encoding='utf-8')
-          parser = ScriptCollector()
-          parser.feed(html)
-          if len(parser.scripts) < 2:
-              raise SystemExit(f'Expected multiple inline scripts; found {len(parser.scripts)}')
-
-          out = Path('/tmp/sao_inline_scripts')
-          out.mkdir(exist_ok=True)
-          for i, script in enumerate(parser.scripts):
-              (out / f'script_{i}.js').write_text(script, encoding='utf-8')
-          print(f'Collected {len(parser.scripts)} top-level inline scripts')
+          c = Collector(); c.feed(html)
+          if len(c.scripts) < 2:
+              raise SystemExit(f'Expected at least two inline scripts, found {len(c.scripts)}')
+          out = Path('/tmp/sao_inline_scripts'); out.mkdir(exist_ok=True)
+          for i, js in enumerate(c.scripts):
+              (out / f'{i}.js').write_text(js, encoding='utf-8')
+          print('Inline scripts:', len(c.scripts))
           PY
-          for f in /tmp/sao_inline_scripts/*.js; do
-            echo "Checking $f"
-            node --check "$f"
-          done
+          for f in /tmp/sao_inline_scripts/*.js; do node --check "$f"; done
 
-      - name: Verify repaired source placement
+      - name: Verify DOM placement and scientific markers
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           s = Path('index.html').read_text(encoding='utf-8')
-          marker = '<script id="sao3dScript" data-sao3d="v10.0.9">'
-          pos = s.index(marker)
-          final_body = s.rfind('</body>')
-          final_html = s.rfind('</html>')
-          if not (0 < pos < final_body < final_html):
-              raise SystemExit('Final DOM placement verification failed')
-          if '</body></html>`;' in s[pos:final_body]:
-              raise SystemExit('3D block still appears inside a report template')
-          print('SAO v10.0.9 runtime placement verified')
+          pos = s.index('sao3dScript')
+          body = s.rfind('</body>')
+          html = s.rfind('</html>')
+          assert 0 < pos < body < html
+          assert 'const SAAO_DALT_TABLE = [' in s
+          assert 'function saaoLimitsFromDAZ(daz)' in s
+          assert '[0.0,8.19,6.29]' in s and '[21.0,4.33,2.43]' in s
+          assert 'setDateInputToTodayOnOpen()' in s
+          assert 'refreshAll();' in s
+          print('DOM placement, startup path and SAAO table verified.')
           PY
 
       - name: Commit repaired runtime

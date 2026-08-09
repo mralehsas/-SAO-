@@ -25,10 +25,17 @@ jobs:
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          marker = '<script id="sao3dScript" data-sao3d="v10.0.9">'
-          if s.count(marker) != 1:
-              raise SystemExit(f'Expected exactly one SAO 3D script marker, found {s.count(marker)}')
+          escaped_marker = r'<script id=\"sao3dScript\" data-sao3d=\"v10.0.9\">'
+          normal_marker = '<script id="sao3dScript" data-sao3d="v10.0.9">'
 
+          escaped_count = s.count(escaped_marker)
+          normal_count = s.count(normal_marker)
+          if escaped_count + normal_count != 1:
+              raise SystemExit(
+                  f'Expected exactly one SAO 3D script marker; escaped={escaped_count}, normal={normal_count}'
+              )
+
+          marker = escaped_marker if escaped_count == 1 else normal_marker
           start = s.index(marker)
           end_tag = '</script>'
           end = s.find(end_tag, start)
@@ -38,23 +45,34 @@ jobs:
           block = s[start:end]
 
           # Guard against accidentally capturing an unrelated/truncated block.
-          for required in ('globeCanvas', 'boot3DUpgrade', 'document.readyState'):
+          for required in ('globeCanvas', 'document.readyState', 'const boot = () =>'):
               if required not in block:
                   raise SystemExit(f'3D block is missing required marker: {required}')
 
-          # Remove the block from the report-template location where it was
-          # accidentally inserted by first-occurrence </body> replacement.
+          # Remove the misplaced block from the report HTML template.
           s = s[:start] + s[end:]
 
-          # Insert before the REAL document closing body tag, not an HTML
-          # fragment embedded inside a JavaScript template literal.
+          # The wrapper tag was escaped only because it had landed inside a JS
+          # template literal. Normalize it before placing it in real HTML.
+          block = block.replace(escaped_marker, normal_marker, 1)
+
+          # Normalize the 3D style wrapper for the real document head as well.
+          escaped_style = r'<style id=\"sao3dStyles\" data-sao3d=\"v10.0.9\">'
+          normal_style = '<style id="sao3dStyles" data-sao3d="v10.0.9">'
+          if s.count(escaped_style) == 1:
+              s = s.replace(escaped_style, normal_style, 1)
+          elif s.count(normal_style) != 1:
+              raise SystemExit('Expected exactly one SAO 3D style block')
+
+          # Insert before the REAL document closing body tag, not a </body>
+          # sequence embedded inside a JavaScript report template literal.
           body_end = s.rfind('</body>')
           if body_end < 0:
               raise SystemExit('Final </body> not found')
           s = s[:body_end] + '\n' + block + '\n' + s[body_end:]
 
           # Scientific-engine invariants: preserve the detailed SAAO table
-          # and its DALT/|DAZ| interpolation path exactly as an active source.
+          # and its DALT/|DAZ| interpolation path exactly.
           scientific_markers = (
               'const SAAO_DALT_TABLE',
               'function saaoLimitsFromDAZ(daz)',
@@ -66,15 +84,23 @@ jobs:
               if required not in s:
                   raise SystemExit(f'Scientific SAAO invariant missing: {required}')
 
-          # Base application initialization must still be present.
+          # Base application initialization must remain intact.
           for required in ('id="mapCanvas"', 'id="dateInput"', 'setDateInputToTodayOnOpen()', 'refreshAll();'):
               if required not in s:
                   raise SystemExit(f'Base runtime invariant missing: {required}')
 
-          if s.count(marker) != 1:
-              raise SystemExit('3D marker count changed after relocation')
-          if s.rfind(marker) > s.rfind('</body>'):
+          if s.count(normal_marker) != 1 or s.count(escaped_marker) != 0:
+              raise SystemExit('3D script marker was not normalized exactly once')
+          if s.rfind(normal_marker) > s.rfind('</body>'):
               raise SystemExit('3D script was not placed inside the final body')
+
+          # Ensure the relocated block is near the actual document end, not
+          # inside an earlier report template.
+          tail = s[s.rfind(normal_marker):]
+          if not tail.rstrip().endswith('</body>\n</html>') and not tail.rstrip().endswith('</body></html>'):
+              # Do not require exact whitespace, but require the final HTML close.
+              if '</body>' not in tail or '</html>' not in tail:
+                  raise SystemExit('3D block is not in the final document tail')
 
           p.write_text(s, encoding='utf-8')
           PY
@@ -113,7 +139,8 @@ jobs:
           parser = ScriptCollector()
           parser.feed(html)
           if len(parser.scripts) < 2:
-              raise SystemExit(f'Expected at least base + 3D inline scripts; found {len(parser.scripts)}')
+              raise SystemExit(f'Expected multiple inline scripts; found {len(parser.scripts)}')
+
           out = Path('/tmp/sao_inline_scripts')
           out.mkdir(exist_ok=True)
           for i, script in enumerate(parser.scripts):
@@ -124,6 +151,23 @@ jobs:
             echo "Checking $f"
             node --check "$f"
           done
+
+      - name: Verify repaired source placement
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('index.html').read_text(encoding='utf-8')
+          marker = '<script id="sao3dScript" data-sao3d="v10.0.9">'
+          pos = s.index(marker)
+          final_body = s.rfind('</body>')
+          final_html = s.rfind('</html>')
+          if not (0 < pos < final_body < final_html):
+              raise SystemExit('Final DOM placement verification failed')
+          if '</body></html>`;' in s[pos:final_body]:
+              raise SystemExit('3D block still appears inside a report template')
+          print('SAO v10.0.9 runtime placement verified')
+          PY
 
       - name: Commit repaired runtime
         shell: bash

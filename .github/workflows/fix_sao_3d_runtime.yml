@@ -1,0 +1,137 @@
+name: Fix SAO v10.0.9 runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.deploy/FIX_3D_RUNTIME'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Move 3D runtime block to the real document body
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          marker = '<script id="sao3dScript" data-sao3d="v10.0.9">'
+          if s.count(marker) != 1:
+              raise SystemExit(f'Expected exactly one SAO 3D script marker, found {s.count(marker)}')
+
+          start = s.index(marker)
+          end_tag = '</script>'
+          end = s.find(end_tag, start)
+          if end < 0:
+              raise SystemExit('Could not find closing script tag for SAO 3D block')
+          end += len(end_tag)
+          block = s[start:end]
+
+          # Guard against accidentally capturing an unrelated/truncated block.
+          for required in ('globeCanvas', 'boot3DUpgrade', 'document.readyState'):
+              if required not in block:
+                  raise SystemExit(f'3D block is missing required marker: {required}')
+
+          # Remove the block from the report-template location where it was
+          # accidentally inserted by first-occurrence </body> replacement.
+          s = s[:start] + s[end:]
+
+          # Insert before the REAL document closing body tag, not an HTML
+          # fragment embedded inside a JavaScript template literal.
+          body_end = s.rfind('</body>')
+          if body_end < 0:
+              raise SystemExit('Final </body> not found')
+          s = s[:body_end] + '\n' + block + '\n' + s[body_end:]
+
+          # Scientific-engine invariants: preserve the detailed SAAO table
+          # and its DALT/|DAZ| interpolation path exactly as an active source.
+          scientific_markers = (
+              'const SAAO_DALT_TABLE',
+              'function saaoLimitsFromDAZ(daz)',
+              '[20.0,4.53,2.63],[20.5,4.43,2.53],[21.0,4.33,2.43]',
+              'const saoVisualMargin = dAltLowerLimb - lim.upper;',
+              'const saoOpticalMargin = dAltLowerLimb - lim.lower;'
+          )
+          for required in scientific_markers:
+              if required not in s:
+                  raise SystemExit(f'Scientific SAAO invariant missing: {required}')
+
+          # Base application initialization must still be present.
+          for required in ('id="mapCanvas"', 'id="dateInput"', 'setDateInputToTodayOnOpen()', 'refreshAll();'):
+              if required not in s:
+                  raise SystemExit(f'Base runtime invariant missing: {required}')
+
+          if s.count(marker) != 1:
+              raise SystemExit('3D marker count changed after relocation')
+          if s.rfind(marker) > s.rfind('</body>'):
+              raise SystemExit('3D script was not placed inside the final body')
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Validate top-level inline JavaScript syntax
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class ScriptCollector(HTMLParser):
+              def __init__(self):
+                  super().__init__(convert_charrefs=False)
+                  self.in_script = False
+                  self.external = False
+                  self.buf = []
+                  self.scripts = []
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() == 'script':
+                      self.in_script = True
+                      self.external = any(k.lower() == 'src' for k, _ in attrs)
+                      self.buf = []
+              def handle_data(self, data):
+                  if self.in_script and not self.external:
+                      self.buf.append(data)
+              def handle_endtag(self, tag):
+                  if tag.lower() == 'script' and self.in_script:
+                      if not self.external:
+                          self.scripts.append(''.join(self.buf))
+                      self.in_script = False
+                      self.external = False
+                      self.buf = []
+
+          html = Path('index.html').read_text(encoding='utf-8')
+          parser = ScriptCollector()
+          parser.feed(html)
+          if len(parser.scripts) < 2:
+              raise SystemExit(f'Expected at least base + 3D inline scripts; found {len(parser.scripts)}')
+          out = Path('/tmp/sao_inline_scripts')
+          out.mkdir(exist_ok=True)
+          for i, script in enumerate(parser.scripts):
+              (out / f'script_{i}.js').write_text(script, encoding='utf-8')
+          print(f'Collected {len(parser.scripts)} top-level inline scripts')
+          PY
+          for f in /tmp/sao_inline_scripts/*.js; do
+            echo "Checking $f"
+            node --check "$f"
+          done
+
+      - name: Commit repaired runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/fix_sao_3d_runtime.yml .deploy/FIX_3D_RUNTIME
+          git add index.html
+          git commit -m "Fix SAO v10.0.9 runtime and 3D integration"
+          git push
